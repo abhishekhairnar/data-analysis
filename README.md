@@ -174,3 +174,41 @@ in
 
 RETURN Result
 
+
+
+
+
+
+
+
+let
+    Source = SharePoint.Contents("https://fiservcorp.sharepoint.com/sites/APACOPSPMO/", [ApiVersion = 15]),
+    #"Shared Documents" = Source{[Name="Shared Documents"]}[Content],
+    General = #"Shared Documents"{[Name="General"]}[Content],
+    #"Monthly APAC Service council" = General{[Name="Monthly APAC Service council"]}[Content],
+    #"Filtered Rows" = Table.SelectRows(#"Monthly APAC Service council", each ([Extension] = ".xlsx") and ([Name] = "Monthly APAC Deck_M-O-M trend- 2025.xlsx")),
+    #"Filtered Hidden Files1" = Table.SelectRows(#"Filtered Rows", each [Attributes]?[Hidden]? <> true),
+
+    // Load the workbook
+    Workbook = Excel.Workbook(#"Filtered Hidden Files1"{0}[Content], null, true),
+
+    // Keep only sheet contents
+    SheetsOnly = Table.SelectRows(Workbook, each [Kind] = "Sheet"),
+
+    // Apply the custom transformation function to each sheet
+    TransformSheet = (sheet as table) as table =>
+        let
+            FilteredRows = Table.SelectRows(sheet, each not (([Column1] = null) and ([Column2] = null))),
+            TransposedTable = Table.Transpose(FilteredRows),
+            FilteredRows2 = Table.SelectRows(TransposedTable, each ([Column2] <> null)),
+            PromotedHeaders = Table.PromoteHeaders(FilteredRows2, [PromoteAllScalars=true])
+        in
+            PromotedHeaders,
+
+    TransformedSheets = Table.AddColumn(SheetsOnly, "Transformed Data", each TransformSheet([Data])),
+
+    // Combine all sheets into one table
+    CombinedData = Table.Combine(TransformedSheets[Transformed Data])
+
+in
+    CombinedData
