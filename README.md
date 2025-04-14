@@ -138,6 +138,38 @@ VAR Result =
             )
 
         RETURN SumValue
+
+
+
+
+
+
+
+let
+    Source = SharePoint.Contents("https://fiservcorp.sharepoint.com/sites/APACOPSPMO/", [ApiVersion = 15]),
+    #"Shared Documents" = Source{[Name="Shared Documents"]}[Content],
+    General = #"Shared Documents"{[Name="General"]}[Content],
+    #"Monthly APAC Service council" = General{[Name="Monthly APAC Service council"]}[Content],
+    #"Filtered Rows" = Table.SelectRows(#"Monthly APAC Service council", each ([Extension] = ".xlsx") and ([Name] = "Monthly APAC Deck_M-O-M trend- 2025.xlsx")),
+    #"Filtered Hidden Files1" = Table.SelectRows(#"Filtered Rows", each [Attributes]?[Hidden]? <> true),
+    #"Invoke Custom Function1" = Table.AddColumn(#"Filtered Hidden Files1", "Transform File (2)", each #"Transform File (2)"([Content])),
+    #"Renamed Columns1" = Table.RenameColumns(#"Invoke Custom Function1", {"Name", "Source.Name"}),
+    #"Removed Other Columns1" = Table.SelectColumns(#"Renamed Columns1", {"Source.Name", "Transform File (2)"}),
+    #"Expanded Table Column1" = Table.ExpandTableColumn(#"Removed Other Columns1", "Transform File (2)", Table.ColumnNames(#"Transform File (2)"(#"Sample File (2)"))),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded Table Column1",{{"Source.Name", type text}, {"Name", type text}, {"Data", type any}, {"Item", type text}, {"Kind", type text}, {"Hidden", type logical}}),
+    Data = #"Changed Type"{0}[Data],
+    #"Filtered Rows1" = Table.SelectRows(Data, each not (([Column1] = null) and ([Column2] = null))),
+    #"Transposed Table" = Table.Transpose(#"Filtered Rows1"),
+    #"Filtered Rows2" = Table.SelectRows(#"Transposed Table", each ([Column2] <> null)),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Filtered Rows2", [PromoteAllScalars=true]),
+    Data1 = #"Changed Type"{1}[Data],
+    #"Filtered Rows3" = Table.SelectRows(Data1, each not (([Column1] = null) and ([Column2] = null))),
+    #"Transposed Table1" = Table.Transpose(#"Filtered Rows3"),
+    #"Filtered Rows4" = Table.SelectRows(#"Transposed Table1", each ([Column2] <> null)),
+    #"Promoted Headers2" = Table.PromoteHeaders(#"Filtered Rows4", [PromoteAllScalars=true]),
+    #"Appended Query" = Table.Combine({#"Promoted Headers2", #"Promoted Headers"})
+in
+    #"Appended Query"
     )
 
 RETURN Result
