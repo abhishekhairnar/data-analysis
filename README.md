@@ -212,3 +212,35 @@ let
 
 in
     CombinedData
+
+
+
+
+------------------------------------------------------------------------------------------------
+
+3MonthAvgTotalChargePerEventID =
+VAR CurrentMonth = MAX('Invoice'[BILLING CYCLE DATE])
+VAR PreviousMonths =
+    CALCULATETABLE(
+        Invoice,
+        DATESINPERIOD(
+            'Invoice'[BILLING CYCLE DATE],
+            MAX('Invoice'[BILLING CYCLE DATE]),
+            -3,
+            MONTH
+        )
+    )
+VAR TotalChargeLast3Months =
+    CALCULATE(
+        SUM(Invoice[TOTAL CHARGE]),
+        PreviousMonths
+    )
+VAR EventIDCountLast3Months =
+    CALCULATE(
+        COUNT(Invoice[EVENT ID]),
+        PreviousMonths
+    )
+RETURN
+    DIVIDE(TotalChargeLast3Months, EventIDCountLast3Months)
+ 
+The following syntax error occurred during parsing: Invalid token, Line 4, Offset 2,  .
